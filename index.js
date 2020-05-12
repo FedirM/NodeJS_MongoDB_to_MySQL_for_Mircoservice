@@ -42,7 +42,8 @@ function databasesConnect( cb ) {
             host: 'localhost',
             user: process.env.MYSQL_LOGIN,
             password: process.env.MYSQL_PASS,
-            database: process.env.MYSQL_DB
+            database: process.env.MYSQL_DB,
+            multipleStatements: true
         });
 
         mysqlConnection.connect((err) => {
