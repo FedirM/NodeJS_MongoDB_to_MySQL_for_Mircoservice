@@ -97,8 +97,8 @@ function processProducts( cb ){
                     mysqlConnection.query(`INSERT INTO product (product_id, original_name, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.name).toLowerCase()}', '${escapeString(product.slug).toLowerCase()}', '${escapeString(product.vendor).toLowerCase()}', '${escapeString(product.description).toLowerCase()}')`, (perr, pres) => {
                         productBar.update( index + 1 );
                         if( perr ){
-                            console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
-                            console.log("ERROR: ", perr);
+                            // console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
+                            // console.log("ERROR: ", perr);
                             prFail++;
                             reject( product );
                         } else {
