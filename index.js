@@ -42,8 +42,8 @@ function databasesConnect( cb ) {
             host: 'localhost',
             user: process.env.MYSQL_LOGIN,
             password: process.env.MYSQL_PASS,
-            database: process.env.MYSQL_DB,
-            multipleStatements: true
+            database: process.env.MYSQL_DB
+            // multipleStatements: true
         });
 
         mysqlConnection.connect((err) => {
@@ -93,10 +93,9 @@ function processProducts( cb ){
             }
             mysqlConnection.query('TRUNCATE TABLE product; TRUNCATE TABLE stock; TRUNCATE TABLE prices', (terr, tres) => {
                 if( terr ) {
-                    console.log('\x1b[31mTruncate err: \x1b[0m', terr);
+                    console.log('\n\x1b[31mTruncate err: \x1b[0m', terr);
                     process.exit(-1);
                 }
-                console.log('Truncate res: ', tres);
                 Promise.all(products.map((product, index) => {
 
                     return reflect(new Promise( ((resolve, reject) => {
