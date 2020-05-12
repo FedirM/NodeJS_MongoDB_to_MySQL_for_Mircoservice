@@ -93,7 +93,7 @@ function processProducts( cb ){
             Promise.all(products.map((product, index) => {
 
                 return reflect(new Promise( ((resolve, reject) => {
-                    mysqlConnection.query(`INSERT INTO levaromat.product (product_id, original_name, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.name).toLowerCase()}', '${escapeString(product.slug).toLowerCase()}', '${escapeString(product.vendor).toLowerCase()}', '${escapeString(product.description).toLowerCase()}')`, (perr, pres) => {
+                    mysqlConnection.query(`INSERT INTO product (product_id, original_name, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.name).toLowerCase()}', '${escapeString(product.slug).toLowerCase()}', '${escapeString(product.vendor).toLowerCase()}', '${escapeString(product.description).toLowerCase()}')`, (perr, pres) => {
                         productBar.update( index + 1 );
                         if( perr ){
                             console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
@@ -105,7 +105,7 @@ function processProducts( cb ){
                                 return reflect( new Promise((resolveOrg) => {
                                     Promise.all( organization.prices.map((price, priceIndex) => {
                                         return reflect( new Promise( (resolvePrice, rejectPrice) => {
-                                            mysqlConnection.query(`INSERT INTO levaromat.prices (organisation_id, product_id, unit_id, cost) VALUES ('${organization.type}', '${product.id}', '${price.unit}', ${price.cost})`, (priceErr, priceRes) => {
+                                            mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${organization.type}', '${product.id}', '${price.unit}', ${price.cost})`, (priceErr, priceRes) => {
                                                 if( priceErr ){
                                                     rejectPrice( null );
                                                 } else {
