@@ -93,6 +93,7 @@ function processProducts( cb ){
             Promise.all(products.map((product, index) => {
 
                 return reflect(new Promise( ((resolve, reject) => {
+                    console.log('\n #### QUERY #### \n\n', `INSERT INTO product (product_id, original_name, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.name).toLowerCase()}', '${escapeString(product.slug).toLowerCase()}', '${escapeString(product.vendor).toLowerCase()}', '${escapeString(product.description).toLowerCase()}')`);
                     mysqlConnection.query(`INSERT INTO product (product_id, original_name, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.name).toLowerCase()}', '${escapeString(product.slug).toLowerCase()}', '${escapeString(product.vendor).toLowerCase()}', '${escapeString(product.description).toLowerCase()}')`, (perr, pres) => {
                         productBar.update( index + 1 );
                         if( perr ){
