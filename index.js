@@ -91,46 +91,31 @@ function processProducts( cb ){
                 console.log('\x1b[31mERR:\x1b[0m ', perr.message);
                 process.exit(-1);
             }
-            Promise.all(products.map((product, index) => {
-
-                return reflect(new Promise( ((resolve, reject) => {
-                    // console.log('\n #### QUERY #### \n\n', `INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}',  '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`);
-                    mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`, (perr, pres) => {
-                        productBar.update( index + 1 );
-                        if( perr ){
-                            console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
-                            console.log("ERROR: ", perr);
-                            console.log(`VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`);
-
-                            prFail++;
-                            reject( product );
-                        } else {
-                            Promise.all( product.prices.map((organization, organisationIndex) => {
-                                return reflect( new Promise((resolveOrg) => {
-                                    Promise.all( organization.prices.map((price, priceIndex) => {
-                                        return reflect( new Promise( (resolvePrice, rejectPrice) => {
-                                            mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${organization.type}', '${product.id}', '${price.unit}', ${price.cost})`, (priceErr, priceRes) => {
-                                                if( priceErr ){
-                                                    rejectPrice( null );
-                                                } else {
-                                                    resolvePrice( price );
-                                                }
-                                            });
-                                        }));
-                                    })).then(() => {resolveOrg(organization);});
-                                }));
-                            })).then(() => {
-                                prSuccess++;
-                                resolve( product );
-                            });
+            for( let index = 0; index < amount; index++ ){
+                mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${products[index].id}', '${escapeString(products[index].name)}', '${escapeString(products[index].slug).toLowerCase()||''}', '${escapeString(products[index].vendor).toLowerCase()||''}', '${escapeString(products[index].description).toLowerCase()||''}')`, (perr, pres) => {
+                    productBar.update( index + 1 );
+                    if( perr ){
+                        console.log('\x1b[31mFailed product. \x1b[0mID: ', products[index].id);
+                        console.log("ERROR: ", perr);
+                        console.log(`VALUES ('${products[index].id}', '${escapeString(products[index].name)}', '${escapeString(products[index].slug).toLowerCase()||''}', '${escapeString(products[index].vendor).toLowerCase()||''}', '${escapeString(products[index].description).toLowerCase()||''}')`);
+                        prFail++;
+                    } else {
+                        for( let orgIndex = 0; orgIndex < products[index].prices.length; orgIndex++ ){
+                            for( let priceIndex = 0; priceIndex < products[index].prices[orgIndex].prices.length; priceIndex++ ){
+                                mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${products[index].prices[orgIndex].type}', '${products[index].id}', '${products[index].prices[orgIndex].prices[priceIndex].unit}', ${products[index].prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
+                                    if( priceErr ){
+                                        console.log('\x1b[31mFailed price in product \x1b[0mID: ', products[index].id);
+                                        console.log("ERROR: ", priceErr);
+                                    }
+                                });
+                            }
                         }
-                    })
-                })));
-            })).then((res) => {
-                productBar.stop();
-                cb();
-                // process.exit(0);
-            });
+                        prSuccess++;
+                    }
+                });
+            }
+            productBar.stop();
+            cb();
         });
     });
 }
