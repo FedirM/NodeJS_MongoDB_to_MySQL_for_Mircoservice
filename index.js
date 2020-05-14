@@ -77,7 +77,32 @@ function reflect( promise ) {
         (e) => {return {value: e, status: 'rejected'};},);
 }
 
-function processProducts( cb ){
+async function processSingleProduct( product ){
+    await mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`, async (perr, pres) => {
+        productBar.update( index + 1 );
+        if( perr ){
+            console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
+            console.log("ERROR: ", perr);
+            console.log(`VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`);
+            prFail++;
+        } else {
+            for( let orgIndex = 0; orgIndex < product.prices.length; orgIndex++ ){
+                for( let priceIndex = 0; priceIndex < product.prices[orgIndex].prices.length; priceIndex++ ){
+                    await mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${product.prices[orgIndex].type}', '${product.id}', '${product.prices[orgIndex].prices[priceIndex].unit}', ${product.prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
+                        if( priceErr ){
+                            console.log('\x1b[31mFailed price in product \x1b[0mID: ', product.id);
+                            console.log("ERROR: ", priceErr);
+                        }
+                    });
+                }
+            }
+            prSuccess++;
+        }
+    });
+    return Object.assign({}, {status: "OK"});
+}
+
+async function processProducts( cb ){
     Product.countDocuments({}, (err, amount) => {
         if( err ){
             console.log('\x1b[31mERR:\x1b[0m ', err.message);
@@ -86,33 +111,14 @@ function processProducts( cb ){
         console.log('\n\x1b[32mProducts processing...\x1b[0m ');
         productBar.start(amount, 0);
 
-        Product.find({}, (perr, products) => {
+        Product.find({}, async (perr, products) => {
             if( perr ){
                 console.log('\x1b[31mERR:\x1b[0m ', perr.message);
                 process.exit(-1);
             }
             for( let index = 0; index < amount; index++ ){
-                mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${products[index].id}', '${escapeString(products[index].name)}', '${escapeString(products[index].slug).toLowerCase()||''}', '${escapeString(products[index].vendor).toLowerCase()||''}', '${escapeString(products[index].description).toLowerCase()||''}')`, (perr, pres) => {
-                    productBar.update( index + 1 );
-                    if( perr ){
-                        console.log('\x1b[31mFailed product. \x1b[0mID: ', products[index].id);
-                        console.log("ERROR: ", perr);
-                        console.log(`VALUES ('${products[index].id}', '${escapeString(products[index].name)}', '${escapeString(products[index].slug).toLowerCase()||''}', '${escapeString(products[index].vendor).toLowerCase()||''}', '${escapeString(products[index].description).toLowerCase()||''}')`);
-                        prFail++;
-                    } else {
-                        for( let orgIndex = 0; orgIndex < products[index].prices.length; orgIndex++ ){
-                            for( let priceIndex = 0; priceIndex < products[index].prices[orgIndex].prices.length; priceIndex++ ){
-                                mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${products[index].prices[orgIndex].type}', '${products[index].id}', '${products[index].prices[orgIndex].prices[priceIndex].unit}', ${products[index].prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
-                                    if( priceErr ){
-                                        console.log('\x1b[31mFailed price in product \x1b[0mID: ', products[index].id);
-                                        console.log("ERROR: ", priceErr);
-                                    }
-                                });
-                            }
-                        }
-                        prSuccess++;
-                    }
-                });
+                await processSingleProduct( products[index] );
+                productBar.update( index+1 );
             }
             productBar.stop();
             cb();
