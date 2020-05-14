@@ -126,11 +126,13 @@ function getProductsData( cb ){
     });
 }
 
-function processProducts() {
+function processProducts( cb ) {
     getProductsData( (products, amount) => {
         for(let task of taskGenerator(products, amount)) {
             console.log('Task: ', task);
         }
+        productBar.stop();
+        cb();
     });
 }
 
