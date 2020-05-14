@@ -117,8 +117,9 @@ async function processProducts( cb ){
             }
             for( let index = 0; index < amount; index++ ){
                 await processSingleProduct( products[index] );
-                productBar.update( index+1 );
+                await productBar.update( index+1 );
             }
+            process.exit(0);
             productBar.stop();
             cb();
         });
