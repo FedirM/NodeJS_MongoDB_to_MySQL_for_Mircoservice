@@ -77,8 +77,8 @@ function reflect( promise ) {
         (e) => {return {value: e, status: 'rejected'};},);
 }
 
-async function processSingleProduct( product ){
-    await mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`, async (perr, pres) => {
+function processSingleProduct( product, index ){
+    mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`, (perr, pres) => {
         if( perr ){
             console.log('\x1b[31mFailed product. \x1b[0mID: ', product.id);
             console.log("ERROR: ", perr);
@@ -87,7 +87,7 @@ async function processSingleProduct( product ){
         } else {
             for( let orgIndex = 0; orgIndex < product.prices.length; orgIndex++ ){
                 for( let priceIndex = 0; priceIndex < product.prices[orgIndex].prices.length; priceIndex++ ){
-                    await mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${product.prices[orgIndex].type}', '${product.id}', '${product.prices[orgIndex].prices[priceIndex].unit}', ${product.prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
+                    mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${product.prices[orgIndex].type}', '${product.id}', '${product.prices[orgIndex].prices[priceIndex].unit}', ${product.prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
                         if( priceErr ){
                             console.log('\x1b[31mFailed price in product \x1b[0mID: ', product.id);
                             console.log("ERROR: ", priceErr);
@@ -98,10 +98,16 @@ async function processSingleProduct( product ){
             prSuccess++;
         }
     });
-    return Object.assign({}, {status: "OK"});
+    productBar.update( index + 1 );
 }
 
-async function processProducts( cb ){
+function* taskGenerator( products, amount ) {
+    for( let index = 0; index < amount; index++ ) {
+        yield processSingleProduct( products[index], index );
+    }
+}
+
+function getProductsData( cb ){
     Product.countDocuments({}, (err, amount) => {
         if( err ){
             console.log('\x1b[31mERR:\x1b[0m ', err.message);
@@ -115,14 +121,16 @@ async function processProducts( cb ){
                 console.log('\x1b[31mERR:\x1b[0m ', perr.message);
                 process.exit(-1);
             }
-            for( let index = 0; index < amount; index++ ){
-                await processSingleProduct( products[index] );
-                await productBar.update( index+1 );
-            }
-            process.exit(0);
-            productBar.stop();
-            cb();
+            cb(products, amount);
         });
+    });
+}
+
+function processProducts() {
+    getProductsData( (products, amount) => {
+        for(let task of taskGenerator(products, amount)) {
+            console.log('Task: ', task);
+        }
     });
 }
 
