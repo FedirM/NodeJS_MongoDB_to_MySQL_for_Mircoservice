@@ -77,6 +77,8 @@ function reflect( promise ) {
         (e) => {return {value: e, status: 'rejected'};},);
 }
 
+/*
+
 function processSinglePriceUnit( prID, prType, unitID, cost ) {
     mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${prType}', '${prID}', '${unitID}', ${cost})`, (priceErr, priceRes) => {
         if( priceErr ){
@@ -121,6 +123,8 @@ function* taskGenerator( products, amount ) {
     }
 }
 
+ */
+
 function getProductsData( cb ){
     Product.countDocuments({}, (err, amount) => {
         if( err ){
@@ -141,10 +145,25 @@ function getProductsData( cb ){
 }
 
 function processProducts( cb ) {
-    getProductsData( (products, amount) => {
-        for(let task of taskGenerator(products, amount)) {
-            // console.log('Task: ', task);
+    getProductsData( async (products, amount) => {
+
+        let prCounter = 0;
+        productBar.start(amount, prCounter);
+
+        for( let product of products ) {
+            prCounter++;
+            await mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`);
+
+            for( let comPrices of product.prices ){
+                for( let unitPrice of comPrices.prices ){
+                    await mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${comPrices.type}', '${product.id}', '${unitPrice.unit}', ${unitPrice.cost})`);
+                }
+            }
+            productBar.update( prCounter );
         }
+        // for(let task of taskGenerator(products, amount)) {
+        //     // console.log('Task: ', task);
+        // }
         productBar.stop();
         cb();
     });
