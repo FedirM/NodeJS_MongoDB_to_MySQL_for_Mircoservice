@@ -77,6 +77,27 @@ function reflect( promise ) {
         (e) => {return {value: e, status: 'rejected'};},);
 }
 
+function processSinglePriceUnit( prID, prType, unitID, cost ) {
+    mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${prType}', '${prID}', '${unitID}', ${cost})`, (priceErr, priceRes) => {
+        if( priceErr ){
+            console.log('\x1b[31mFailed price in product \x1b[0mID: ', prID);
+            console.log("ERROR: ", priceErr);
+        }
+    });
+}
+
+function* pricesListGenerator( prID, prType, prices ) {
+    for( let priceIndex = 0; priceIndex < prices.length; priceIndex++ ){
+        yield processSinglePriceUnit( prID, prType, prices[priceIndex].unit, prices[priceIndex].cost );
+    }
+}
+
+function* prTypeListGenerator( prices, prID ) {
+    for( let orgIndex = 0; orgIndex < prices.length; orgIndex++ ){
+        yield* pricesListGenerator( prID, prices[orgIndex].type, prices[orgIndex].prices );
+    }
+}
+
 function processSingleProduct( product, index ){
     mysqlConnection.query(`INSERT INTO product (product_id, name, slug, vendor, description) VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`, (perr, pres) => {
         if( perr ){
@@ -85,15 +106,8 @@ function processSingleProduct( product, index ){
             console.log(`VALUES ('${product.id}', '${escapeString(product.name)}', '${escapeString(product.slug).toLowerCase()||''}', '${escapeString(product.vendor).toLowerCase()||''}', '${escapeString(product.description).toLowerCase()||''}')`);
             prFail++;
         } else {
-            for( let orgIndex = 0; orgIndex < product.prices.length; orgIndex++ ){
-                for( let priceIndex = 0; priceIndex < product.prices[orgIndex].prices.length; priceIndex++ ){
-                    mysqlConnection.query(`INSERT INTO prices (organisation_id, product_id, unit_id, cost) VALUES ('${product.prices[orgIndex].type}', '${product.id}', '${product.prices[orgIndex].prices[priceIndex].unit}', ${product.prices[orgIndex].prices[priceIndex].cost})`, (priceErr, priceRes) => {
-                        if( priceErr ){
-                            console.log('\x1b[31mFailed price in product \x1b[0mID: ', product.id);
-                            console.log("ERROR: ", priceErr);
-                        }
-                    });
-                }
+            for( let priceProcess of prTypeListGenerator( product.prices, product.id ) ){
+                // here process product price list
             }
             prSuccess++;
         }
